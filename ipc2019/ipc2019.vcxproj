@@ -115,7 +115,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -188,6 +188,7 @@
   <ItemGroup>
     <ClInclude Include="BaseLayer.h" />
     <ClInclude Include="ChatAppLayer.h" />
+    <ClInclude Include="NICData.h" />
     <ClInclude Include="NILayer.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="ipc2019.h" />
@@ -203,6 +204,7 @@
     <ClCompile Include="BaseLayer.cpp" />
     <ClCompile Include="ChatAppLayer.cpp" />
     <ClCompile Include="EthernetLayer.cpp" />
+    <ClCompile Include="NICData.cpp" />
     <ClCompile Include="NILayer.cpp" />
     <ClCompile Include="ipc2019.cpp" />
     <ClCompile Include="ipc2019Dlg.cpp" />

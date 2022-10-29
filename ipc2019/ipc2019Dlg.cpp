@@ -22,15 +22,15 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 
-// 대화 상자 데이터입니다.
+	// 대화 상자 데이터입니다.
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 지원입니다.
 
-// 구현입니다.
+	// 구현입니다.
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -46,9 +46,9 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 
 
 /*
-클래스의 멤버 함수를 정의하는 구현(.cpp) 파일에서 
-매크로를 BEGIN_MESSAGE_MAP 사용하여 
-메시지 맵을 시작한 다음 각 메시지 처리기 함수에 대한 매크로 항목을 추가하고 
+클래스의 멤버 함수를 정의하는 구현(.cpp) 파일에서
+매크로를 BEGIN_MESSAGE_MAP 사용하여
+메시지 맵을 시작한 다음 각 메시지 처리기 함수에 대한 매크로 항목을 추가하고
 매크로를 사용하여 메시지 맵을 END_MESSAGE_MAP 완료합니다.
 */
 
@@ -63,7 +63,7 @@ Cipc2019Dlg::Cipc2019Dlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_IPC2019_DIALOG, pParent)
 	, CBaseLayer("ChatDlg")
 	, m_bSendReady(FALSE)
-	, m_nAckReady( -1 )
+	, m_nAckReady(-1)
 
 	, m_unSrcAddr(_T(""))
 	, m_unDstAddr(_T(""))
@@ -88,8 +88,8 @@ Cipc2019Dlg::Cipc2019Dlg(CWnd* pParent /*=nullptr*/)
 	// 레이어를 연결한다. (레이어 생성)
 	m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) ) )");
 
-	m_NI = (CNILayer*) m_LayerMgr.GetLayer("NI");
-	m_Ether = (CEthernetLayer*) m_LayerMgr.GetLayer("Ethernet");
+	m_NI = (CNILayer*)m_LayerMgr.GetLayer("NI");
+	m_Ether = (CEthernetLayer*)m_LayerMgr.GetLayer("Ethernet");
 	m_ChatApp = (CChatAppLayer*)m_LayerMgr.GetLayer("ChatApp");
 	//Protocol Layer Setting
 }
@@ -97,7 +97,7 @@ Cipc2019Dlg::Cipc2019Dlg(CWnd* pParent /*=nullptr*/)
 void Cipc2019Dlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	
+
 	DDX_Control(pDX, IDC_LIST_CHAT, m_ListChat);	// 메시지들이 출력되는 곳
 	DDX_Control(pDX, IDC_COMBO1, m_Adapter);		// 어댑터(Mac 주소 나오는 곳)
 	DDX_Control(pDX, IDC_PROGRESS1, m_progress);	// 파일 전송 게이지 표시하는 곳
@@ -131,7 +131,7 @@ BEGIN_MESSAGE_MAP(Cipc2019Dlg, CDialogEx)
 	ON_REGISTERED_MESSAGE(nRegAckMsg, OnRegAckMsg)
 	///////////////////////////////////////////////////////////////////////
 	*/
-	
+
 	ON_BN_CLICKED(IDC_BUTTON_FILE_ADD, &Cipc2019Dlg::OnBnClickedButtonFileAdd)
 	ON_BN_CLICKED(IDC_BUTTON_FILE_TRANSFER, &Cipc2019Dlg::OnBnClickedButtonFileTransfer)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &Cipc2019Dlg::OnCbnSelchangeCombo1)
@@ -173,15 +173,25 @@ BOOL Cipc2019Dlg::OnInitDialog()	// 로그인 다이얼로그 생성
 	SetRegstryMessage();
 	SetDlgState(IPC_INITIALIZING);
 
+
+	NICData& data = NICData::GetNICData();
+	for (int index = 0; index < data.GetAddressCount(); ++index)
+		m_Adapter.InsertString(-1, data.GetMacAddress(index));
+	m_Adapter.SetCurSel(0);
+
+	m_progress.SetRange(0, 1000);
+
+	/*
 	// 어댑터(Mac 주소) 목록에 내용 채우기
 	for (int i = 0; i < m_NI->getAdapterNum(); i++)
 		m_Adapter.AddString(m_NI->getAdapterName(i));
+	*/
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
 void Cipc2019Dlg::OnSysCommand(UINT nID, LPARAM lParam) // 메뉴창 조절 함수
-{	
+{
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)	// 메뉴창 종료
 	{
 		CAboutDlg dlgAbout;
@@ -266,7 +276,7 @@ void Cipc2019Dlg::SendData()	// ChatAppLayer로 메시지 전송
 	if (m_unDstAddr == (unsigned int)0xff)
 		MsgHeader.Format(_T("[%d:BROADCAST] "), m_unSrcAddr);
 	*/
-	
+
 	MsgHeader.Format(_T("[%s:%s] "), m_unSrcAddr, m_unDstAddr);
 
 	m_ListChat.AddString(MsgHeader + m_stMessage);
@@ -278,14 +288,14 @@ void Cipc2019Dlg::SendData()	// ChatAppLayer로 메시지 전송
 	//////////////////////////////segemantation APP_DATA
 	if (m_stMessage.GetLength() > APP_DATA_SIZE) // 메시지 길아가 1496 초과인 경우
 	{
-		while (1) 
+		while (1)
 		{
-			if (len == 0) 
+			if (len == 0)
 			{
 				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE, CHAT_TYPE);
 				len += APP_DATA_SIZE;
 			}
-			else 
+			else
 			{
 				if (m_stMessage.GetLength() - len < APP_DATA_SIZE)	// 단편화 했을 때, 마지막 조각인 경우 
 				{
@@ -392,7 +402,7 @@ BOOL Cipc2019Dlg::PreTranslateMessage(MSG* pMsg)
 		{
 		case VK_RETURN:
 			if (::GetDlgCtrlID(::GetFocus()) == IDC_EDIT3)
-				OnBnClickedButtonSend();					
+				OnBnClickedButtonSend();
 			return FALSE;
 		case VK_ESCAPE: return FALSE;
 		}
@@ -411,12 +421,12 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 
 	CButton* pSendButton = (CButton*)GetDlgItem(bt_send);
 	CButton* pSetAddrButton = (CButton*)GetDlgItem(bt_setting);
-	CEdit*	 pMsgEdit = (CEdit*)GetDlgItem(IDC_EDIT3);
-	CEdit*	 pSrcEdit = (CEdit*)GetDlgItem(IDC_EDIT1);
-	CEdit*	 pDstEdit = (CEdit*)GetDlgItem(IDC_EDIT2);
-	CEdit*	 pFAEdit = (CEdit*)GetDlgItem(IDC_EDIT_FILE_ADD);
-	CEdit*	 pFAButton = (CEdit*)GetDlgItem(IDC_BUTTON_FILE_ADD);
-	CEdit*	 pFTButton = (CEdit*)GetDlgItem(IDC_BUTTON_FILE_TRANSFER);
+	CEdit* pMsgEdit = (CEdit*)GetDlgItem(IDC_EDIT3);
+	CEdit* pSrcEdit = (CEdit*)GetDlgItem(IDC_EDIT1);
+	CEdit* pDstEdit = (CEdit*)GetDlgItem(IDC_EDIT2);
+	CEdit* pFAEdit = (CEdit*)GetDlgItem(IDC_EDIT_FILE_ADD);
+	CEdit* pFAButton = (CEdit*)GetDlgItem(IDC_BUTTON_FILE_ADD);
+	CEdit* pFTButton = (CEdit*)GetDlgItem(IDC_BUTTON_FILE_TRANSFER);
 
 	switch (state)
 	{
@@ -435,16 +445,16 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 		break;
 	case IPC_WAITFORACK:	break;
 	case IPC_ERROR:		break;
-	/*
-	case IPC_UNICASTMODE:
-		m_unDstAddr = 0x0;
-		pDstEdit->EnableWindow(TRUE);
-		break;
-	case IPC_BROADCASTMODE:
-		m_unDstAddr = 0xff;
-		pDstEdit->EnableWindow(FALSE);
-		break;
-	*/
+		/*
+		case IPC_UNICASTMODE:
+			m_unDstAddr = 0x0;
+			pDstEdit->EnableWindow(TRUE);
+			break;
+		case IPC_BROADCASTMODE:
+			m_unDstAddr = 0xff;
+			pDstEdit->EnableWindow(FALSE);
+			break;
+		*/
 	case IPC_ADDR_SET:
 		pSetAddrButton->SetWindowText(_T("재설정(&R)"));
 		pSrcEdit->EnableWindow(FALSE);
@@ -550,17 +560,19 @@ void Cipc2019Dlg::OnBnClickedButtonAddr()	// 설정 버튼 눌렀을 때 일어�
 		m_unSrcAddr.Format("%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
 			m_srcMacAddress[0], m_srcMacAddress[1], m_srcMacAddress[2],
 			m_srcMacAddress[3], m_srcMacAddress[4], m_srcMacAddress[5]);
-		
-		m_unDstAddr.MakeLower();
+
+		//m_unDstAddr.MakeLower();
 		ConvertHex(m_unDstAddr, m_dstMacAddress);
+
 		/*
 		m_unDstAddr.Format("%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",
 			m_dstMacAddress[0], m_dstMacAddress[1], m_dstMacAddress[2],
 			m_dstMacAddress[3], m_dstMacAddress[4], m_dstMacAddress[5]);
 		*/
+
 		m_Ether->SetSourceAddress(m_srcMacAddress);
 		m_Ether->SetSourceAddress(m_dstMacAddress);
-		
+
 		m_RecvThread = ::AfxBeginThread(Cipc2019Dlg::ReceiveThread, this);
 	}
 	else

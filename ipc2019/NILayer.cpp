@@ -5,6 +5,9 @@
 #include "stdafx.h"
 #include "pch.h"
 #include "NILayer.h"
+#include <algorithm>
+#include <vector>
+#include <string>
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -35,7 +38,7 @@ void CNILayer::SetNICList()	// Retrieve the device list
 	char errbuf[256];
 
 	// pcap_findalldevs(find all of device)
-	if (pcap_findalldevs(&m_allDevs, errbuf) == -1) 
+	if (pcap_findalldevs(&m_allDevs, errbuf) == -1)
 	{
 		fprintf(stderr, "Error in pcap_findalldevs: %s\n", errbuf);
 		exit(1);
@@ -52,7 +55,7 @@ void CNILayer::setAdapterNum(int index)
 	// get addapterName in m_adapterName value
 	getAdapterName(index);
 
-	if ((m_pAdapterObjects = pcap_open_live(m_adapterName, 6553, 1, 1000, errbuf)) == NULL)
+	if ((m_pAdapterObjects = pcap_open_live(m_adapterName, 65536, 1, 1000, errbuf)) == NULL)
 	{
 		fprintf(stderr, "\nUnable to open the adapter. %s is not supported by WinPcap\n");
 		exit(1);        // Free the device list
@@ -88,20 +91,16 @@ void CNILayer::setMacAddress()
 	getAdapterName(m_selectedNum);//get adapter name
 	lpAdapter = PacketOpenAdapter(m_adapterName);//open adapter
 
-	/*
 	if (!lpAdapter || (lpAdapter->hFile == INVALID_HANDLE_VALUE)) {
 		dwErrorCode = GetLastError();	// if fail to open
 	}
-	*/
 
 	OidData = (PPACKET_OID_DATA)malloc(6 + sizeof(PACKET_OID_DATA));// Allocate a buffer to get the MAC adress
-	
-	/*
-	if (OidData == NULL) 
+
+	if (OidData == NULL)
 	{
 		PacketCloseAdapter(lpAdapter);// fail to malloc
 	}
-	*/
 
 	OidData->Oid = 0x01010101;			// Retrieve the adapter MAC querying the NIC driver
 	OidData->Length = 6;
@@ -128,17 +127,12 @@ unsigned char* CNILayer::getMacAddress()
 BOOL CNILayer::Send(unsigned char* ppayload, int nlength)
 {
 	//OID_GEN_MEDIA_CONNECT_STATUS;
-	
+
 	if (pcap_sendpacket(m_pAdapterObjects, ppayload, nlength) != 0)
 	{
 		fprintf(stderr, "\nError sending the packet: \n", pcap_geterr(m_pAdapterObjects));
 		return FALSE;
 	}
-
-	/*
-	bool result = (pcap_sendpacket(eth, packet.GetPacket(), packet.GetPacketLength()) == 0);	
-	// pcap을 이용해 packet 전송
-	*/
 
 	return TRUE;
 }
