@@ -16,24 +16,46 @@ class CEthernetLayer
 	: public CBaseLayer
 {
 private:
-	inline void		ResetHeader();								// 헤더 초기화
+	inline void		ResetHeader();
 
 public:
-	unsigned char*	Receive();									// CNI에서 수신
-	BOOL			Send(unsigned char* ppayload, int nlength);	// CNI으로 송신
-	void			SetDestinAddress(unsigned char* pAddress);	// 넘겨받은 source 주소를 Ethernet source주소로 지정
-	void			SetSourceAddress(unsigned char* pAddress);	// 넘겨받은 목적지 주소를 Ethernet destination 주소로 지정
-	unsigned char* GetDestinAddress();							// 헤더에 들어있는 도착주소를 반환한다.
-	unsigned char* GetSourceAddress();							// 헤더에 들어있는 시작주소를 반환한다.
+	unsigned short	tcp_port;
+	void			StartThread();
 
-	CEthernetLayer(char* pName);	// 생성자
-	virtual ~CEthernetLayer();		// 소멸자
+	BOOL			Receive(unsigned char* ppayload);
+	BOOL			Send(unsigned char* ppayload, int nlength);
+
+	void			SetEnetDstAddress(unsigned char* pAddress);
+	void			SetEnetSrcAddress(unsigned char* pAddress);
+	unsigned char* GetEnetDstAddress();
+	unsigned char* GetEnetSrcAddress();
+
+	CEthernetLayer(char* pName);
+	virtual ~CEthernetLayer();
+
+	typedef struct _ETHERNET_ADDR
+	{
+		union {
+			struct { unsigned char e0, e1, e2, e3, e4, e5; } s_un_byte;
+			unsigned char s_ether_addr[6];
+		} S_un;
+
+#define addr0 S_un.s_un_byte.e0
+#define addr1 S_un.s_un_byte.e1
+#define addr2 S_un.s_un_byte.e2
+#define addr3 S_un.s_un_byte.e3
+#define addr4 S_un.s_un_byte.e4
+#define addr5 S_un.s_un_byte.e5
+
+#define addrs  S_un.s_ether_addr
+
+	} ETHERNET_ADDR, * LPETHERNET_ADDR;
 
 	typedef struct _ETHERNET_HEADER {
 
-		unsigned char	enet_dstaddr[6];		// destination address of ethernet layer
-		unsigned char	enet_srcaddr[6];		// source address of ethernet layer
-		unsigned short	enet_type;		// type of ethernet layer
+		ETHERNET_ADDR	enet_dstaddr;		// destination address of ethernet layer
+		ETHERNET_ADDR	enet_srcaddr;		// source address of ethernet layer
+		unsigned short	enet_type;			// type of ethernet layer
 		unsigned char	enet_data[ETHER_MAX_DATA_SIZE]; // frame data
 
 	} ETHERNET_HEADER, * PETHERNET_HEADER;

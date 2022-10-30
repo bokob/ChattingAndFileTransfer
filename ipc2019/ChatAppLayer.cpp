@@ -17,141 +17,135 @@ static char THIS_FILE[] = __FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CChatAppLayer::CChatAppLayer(char* pName)
-	: CBaseLayer(pName),	// CBaseLayer에서 상속받는다. 입력받은 인자로 CBaseLayer의 생성자 실행					
-	mp_Dlg(NULL)			// Dlg를 NULL로 초기화
+	: CBaseLayer(pName),
+	mp_Dlg(NULL)
 {
-	ResetHeader();	// 헤더 초기화
+	ResetHeader();
 }
 
-CChatAppLayer::~CChatAppLayer()	// 소멸자
+CChatAppLayer::~CChatAppLayer()
 {
-
 }
 
-/*
-void CChatAppLayer::SetSourceAddress(unsigned int src_addr)
-// 헤더의 시작하는 주소 설정
+void CChatAppLayer::ResetHeader()
 {
-	m_sHeader.app_srcaddr = src_addr; // 헤더에 시작주소를 넣는다.
+	m_sHeader.capp_totlen = 0x0000;
+	m_sHeader.capp_type = 0x00;
+
+	memset(m_sHeader.capp_data, 0, APP_DATA_SIZE);
 }
 
-void CChatAppLayer::SetDestinAddress(unsigned int dst_addr)
-// 헤더의 도착하는 주소 설정
+BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength)
 {
-	m_sHeader.app_dstaddr = dst_addr;	// 헤더에 도착주소를 넣는다.
-}
-
-unsigned int CChatAppLayer::GetSourceAddress()
-// 헤더에 들어있는 시작주소를 반환한다.
-{
-	return m_sHeader.app_srcaddr;
-}
-
-unsigned int CChatAppLayer::GetDestinAddress()
-// 헤더에 들어있는 도착주소를 반환한다.
-{
-	return m_sHeader.app_dstaddr;
-}
-*/
-
-void CChatAppLayer::ResetHeader()	// 헤더 초기화
-{
-	/*
-	m_sHeader.app_srcaddr = 0x00000000;
-	m_sHeader.app_dstaddr = 0x00000000;
-	*/
-
-	m_sHeader.app_length = 0x0000;
-	m_sHeader.app_type = 0x00;
-	memset(m_sHeader.app_data, 0, APP_DATA_SIZE);
-}
-
-
-BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength, unsigned char type)
-{
-	m_sHeader.app_length = (unsigned short)nlength;
-
+	m_sHeader.capp_totlen = (unsigned short)nlength;
 	BOOL bSuccess = FALSE;
-	m_sHeader.app_type = type;
-	//////////////////////// fill the blank ///////////////////////////////
-		// 메모리 복사로 데이터를 header에 저장
-		// ChatApp 레이어의 헤더에 데이터와 그 길이를 저장한다.
-	memcpy(m_sHeader.app_data, ppayload, nlength > APP_DATA_SIZE ? APP_DATA_SIZE : nlength);
-	// ChatApp 레이어의 밑에 레이어인 Ethertnet 레이어에 데이터를 넘겨준다.
-	// 메모리 참조로 ChatApp의(헤더 + 데이터)와 (데이터 길이+헤더길이)를
-	// 다음 계층의 data로 넘겨준다.
+
+	m_sHeader.capp_type = CHAT_TYPE;
+
+	memcpy(m_sHeader.capp_data, ppayload, nlength);
+
 	bSuccess = mp_UnderLayer->Send((unsigned char*)&m_sHeader, nlength + APP_HEADER_SIZE);
-	///////////////////////////////////////////////////////////////////////
+
 	return bSuccess;
 }
 
-unsigned char* CChatAppLayer::Receive(int ThreadType)
+BOOL CChatAppLayer::Receive(unsigned char* ppayload)
 {
-	unsigned char* ppayload = mp_UnderLayer->Receive(ThreadType);
+	PCHAT_APP_HEADER capp_hdr = (PCHAT_APP_HEADER)ppayload;
+	static unsigned char* GetBuff;
 
-	if (ppayload != NULL)
-	{
-		// ppayload를 ChatApp 헤더 구조체로 넣는다.
-		PCHAT_APP_HEADER app_hdr = (PCHAT_APP_HEADER)ppayload;
-		int length = app_hdr->app_length;
+	if (capp_hdr->capp_totlen <= APP_DATA_SIZE) {
+		GetBuff = (unsigned char*)malloc(capp_hdr->capp_totlen);
+		memset(GetBuff, 0, capp_hdr->capp_totlen);
+		memcpy(GetBuff, capp_hdr->capp_data, capp_hdr->capp_totlen);
+		GetBuff[capp_hdr->capp_totlen] = '\0';
 
-		//////////////////////// fill the blank ///////////////////////////////
-				// 밑 계층에서 넘겨받은 ppayload를 분석하여 ChatDlg 계층으로 넘겨준다.
-		unsigned char GetBuff[APP_DATA_SIZE]; // 32비트 크기의 App Data Size만큼의 GetBuff를 선언한다.
-		memset(GetBuff, '\0', APP_DATA_SIZE);  // GetBuff를 초기화해준다.
-
-		// 받은 데이터인 App Header를 분석하여, GetBuff에 data 길이와 APP_DATA_SIZE 길이와 비교하여 정한 길이만큼
-		// data를 저장한다.
-		memcpy(GetBuff, app_hdr->app_data, app_hdr->app_length > APP_DATA_SIZE ? APP_DATA_SIZE : app_hdr->app_length);
-
-		if (app_hdr->app_type = CHAT_REC)
-		{
-			GetBuff[APP_DATA_SIZE + 1] = 1;
-			return (unsigned char*)GetBuff;
-		}
-		else if (app_hdr->app_type == CHAT_NOTREC)
-		{
-			GetBuff[APP_DATA_SIZE + 1] = 0;
-			return (unsigned char*)GetBuff;
-		}
-	}
-	return 0;
-
-
-	/*
-
-	// ppayload를 ChatApp 헤더 구조체로 넣는다.
-	PCHAT_APP_HEADER app_hdr = (PCHAT_APP_HEADER)ppayload;
-
-	// 보내는 쪽 주소와 받는 쪽의 주소가 일치한 경우 메시지를 보낸다.
-	if (app_hdr->app_dstaddr == m_sHeader.app_srcaddr ||
-		(app_hdr->app_srcaddr != m_sHeader.app_srcaddr &&		   // 일대일 or 브로드캐스팅
-			app_hdr->app_dstaddr == (unsigned int)0xff))
-	{
-		//////////////////////// fill the blank ///////////////////////////////
-				// 밑 계층에서 넘겨받은 ppayload를 분석하여 ChatDlg 계층으로 넘겨준다.
-		unsigned char GetBuff[APP_DATA_SIZE]; // 32비트 크기의 App Data Size만큼의 GetBuff를 선언한다.
-		memset(GetBuff, '\0', APP_DATA_SIZE);  // GetBuff를 초기화해준다.
-
-		// 받은 데이터인 App Header를 분석하여, GetBuff에 data 길이와 APP_DATA_SIZE 길이와 비교하여 정한 길이만큼
-		// data를 저장한다.
-		memcpy(GetBuff, app_hdr->app_data, app_hdr->app_length > APP_DATA_SIZE ? APP_DATA_SIZE : app_hdr->app_length);
-
-		CString Msg;
-		// App Header를 분석하여, 리스트 창에 뿌려줄 내용의 메시지를 구성한다.
-		// 보내는 쪽 또는 받는 쪽과 GetBuff에 저장된 메시지 내용을 합친다.
-		if (app_hdr->app_dstaddr == (unsigned)0xff)
-			Msg.Format(_T("[%d:BROADCAST] %s"), app_hdr->app_srcaddr, (char*)GetBuff);
-		else
-			Msg.Format(_T("[%d:%d] %s"), app_hdr->app_srcaddr, app_hdr->app_dstaddr, (char*)GetBuff);
-
-		// 위에서 만들어진 메시지 포맷을 ChatDlg로 넘겨준다.
-		mp_aUpperLayer[0]->Receive((unsigned char*)Msg.GetBuffer(0));
-		///////////////////////////////////////////////////////////////////////
+		mp_aUpperLayer[0]->Receive((unsigned char*)GetBuff);
 		return TRUE;
 	}
-	else    // 메시지 안보낸다.
+	if (capp_hdr->capp_type == DATA_TYPE_BEGIN)
+	{
+		GetBuff = (unsigned char*)malloc(capp_hdr->capp_totlen);
+		memset(GetBuff, 0, capp_hdr->capp_totlen);
+	}
+	else if (capp_hdr->capp_type == DATA_TYPE_CONT)
+	{
+		strncat((char*)GetBuff, (char*)capp_hdr->capp_data, strlen((char*)capp_hdr->capp_data));
+		GetBuff[strlen((char*)GetBuff)] = '\0';
+	}
+	else if (capp_hdr->capp_type == DATA_TYPE_END)
+	{
+		memcpy(GetBuff, GetBuff, capp_hdr->capp_totlen);
+		GetBuff[capp_hdr->capp_totlen] = '\0';
+
+		mp_aUpperLayer[0]->Receive((unsigned char*)GetBuff);
+		free(GetBuff);
+	}
+	else
 		return FALSE;
 
-	*/
+	return TRUE;
 }
+
+/*
+UINT CChatAppLayer::ChatThread(LPVOID pParam)
+{
+	BOOL bSuccess = FALSE;
+	CChatAppLayer* pChat = (CChatAppLayer*)pParam;
+	int data_length = APP_DATA_SIZE;
+	int seq_tot_num;
+	int data_index;
+	int temp = 0;
+
+
+	if (pChat->m_length < APP_DATA_SIZE)
+		seq_tot_num = 1;
+	else
+		seq_tot_num = (pChat->m_length / APP_DATA_SIZE) + 1;
+
+	for (int i = 0; i <= seq_tot_num + 1; i++)
+	{
+
+		if (seq_tot_num == 1) {
+			data_length = pChat->m_length;
+		}
+		else {
+			if (i == seq_tot_num)
+				data_length = pChat->m_length % APP_DATA_SIZE;
+			else
+				data_length = APP_DATA_SIZE;
+		}
+
+		memset(pChat->m_sHeader.capp_data, 0, data_length);
+
+		if (i == 0)
+		{
+			pChat->m_sHeader.capp_totlen = pChat->m_length;
+			pChat->m_sHeader.capp_type = DATA_TYPE_BEGIN;
+			memset(pChat->m_sHeader.capp_data, 0, data_length);
+			data_length = 0;
+		}
+		else if (i != 0 && i <= seq_tot_num)
+		{
+			data_index = data_length;
+			pChat->m_sHeader.capp_type = DATA_TYPE_CONT;
+			pChat->m_sHeader.capp_seq_num = i - 1;
+
+			CString str = pChat->m_ppayload;
+			str = str.Mid(temp, temp + data_index);
+
+			memcpy(pChat->m_sHeader.capp_data, str, data_length);
+			temp += data_index;
+		}
+		else
+		{
+			pChat->m_sHeader.capp_type = DATA_TYPE_END;
+			memset(pChat->m_ppayload, 0, data_length);
+			data_length = 0;
+		}
+		bSuccess = pChat->mp_UnderLayer->Send((unsigned char*)&pChat->m_sHeader, data_length + APP_HEADER_SIZE);
+	}
+
+	return bSuccess;
+}
+*/

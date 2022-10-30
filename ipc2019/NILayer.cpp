@@ -1,13 +1,6 @@
-// FileLayer.cpp: implementation of the CFileLayer class.
-//
-//////////////////////////////////////////////////////////////////////
-
-#include "stdafx.h"
 #include "pch.h"
+#include "stdafx.h"
 #include "NILayer.h"
-#include <algorithm>
-#include <vector>
-#include <string>
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -15,149 +8,167 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
-
-CNILayer::CNILayer(char* pName, pcap_t* pAdapterObject,
-	int iNumAdapter) : CBaseLayer(pName)
+CNILayer::CNILayer(char* pName, LPADAPTER* pAdapterObject, int iNumAdapter)
+	: CBaseLayer(pName)
 {
-	m_pAdapterObjects = pAdapterObject;
+	m_AdapterObject = NULL;
 	m_iNumAdapter = iNumAdapter;
-	SetNICList();
+	m_thrdSwitch = TRUE;
+	SetAdapterList(NULL);
 }
 
 CNILayer::~CNILayer()
 {
-
 }
 
-void CNILayer::SetNICList()	// Retrieve the device list
+void CNILayer::PacketStartDriver()
 {
+	char errbuf[PCAP_ERRBUF_SIZE];
+
+	if (m_iNumAdapter == -1) {
+		AfxMessageBox("Not exist NICard");
+		return;
+	}
+
+	m_AdapterObject = pcap_open_live(m_pAdapterList[m_iNumAdapter]->name, 1500, PCAP_OPENFLAG_PROMISCUOUS, 2000, errbuf);
+	if (!m_AdapterObject) {
+		AfxMessageBox(errbuf);
+		return;
+	}
+	AfxBeginThread(ReadingThread, this);
+}
+
+void CNILayer::PacketEndDriver()
+{
+	//	pcap_close(m_AdapterObject);
+	m_thrdSwitch = FALSE;
+}
+
+pcap_if_t* CNILayer::GetAdapterObject(int iIndex)
+{
+	return m_pAdapterList[iIndex];
+}
+
+void CNILayer::SetAdapterNumber(int iNum)
+{
+	m_iNumAdapter = iNum;
+}
+
+void CNILayer::SetAdapterList(LPADAPTER* plist)
+{
+	pcap_if_t* alldevs;
 	pcap_if_t* d;
-	char errbuf[256];
+	int i = 0;
 
-	// pcap_findalldevs(find all of device)
-	if (pcap_findalldevs(&m_allDevs, errbuf) == -1)
+	char errbuf[PCAP_ERRBUF_SIZE];
+
+	for (int j = 0; j < NI_COUNT_NIC; j++)
 	{
-		fprintf(stderr, "Error in pcap_findalldevs: %s\n", errbuf);
-		exit(1);
+		m_pAdapterList[j] = NULL;
 	}
 
-	// count addapter's num
-	for (d = m_allDevs; d; d = d->next)
-		m_iNumAdapter++;
-}
-
-void CNILayer::setAdapterNum(int index)
-{
-	char errbuf[256];
-	// get addapterName in m_adapterName value
-	getAdapterName(index);
-
-	if ((m_pAdapterObjects = pcap_open_live(m_adapterName, 65536, 1, 1000, errbuf)) == NULL)
+	if (pcap_findalldevs(&alldevs, errbuf) == -1)
 	{
-		fprintf(stderr, "\nUnable to open the adapter. %s is not supported by WinPcap\n");
-		exit(1);        // Free the device list
+		AfxMessageBox("Not exist NICard");
+		return;
 	}
-	// save adapter's number
-	m_selectedNum = index;
+	if (!alldevs)
+	{
+		AfxMessageBox("Not exist NICard");
+		return;
+	}
+
+	for (d = alldevs; d; d = d->next)
+	{
+		m_pAdapterList[i++] = d;
+	}
 }
 
-int CNILayer::getAdapterNum()//get adapter number
+CString CNILayer::GetNICardAddress(char* adapter_name)
 {
-	return m_iNumAdapter;
-}
-
-char* CNILayer::getAdapterName(int index)//get adapter name
-{
-	pcap_if_t* d = m_allDevs;
-
-	for (int i = 0; i < index; i++)
-		d = d->next;
-
-	strcpy(m_adapterName, d->name);
-
-	return m_adapterName;
-}
-
-void CNILayer::setMacAddress()
-{
-	LPADAPTER lpAdapter = 0;
-	DWORD dwErrorCode;
 	PPACKET_OID_DATA OidData;
-	BOOL Status;
+	LPADAPTER lpAdapter;
 
-	getAdapterName(m_selectedNum);//get adapter name
-	lpAdapter = PacketOpenAdapter(m_adapterName);//open adapter
-
-	if (!lpAdapter || (lpAdapter->hFile == INVALID_HANDLE_VALUE)) {
-		dwErrorCode = GetLastError();	// if fail to open
-	}
-
-	OidData = (PPACKET_OID_DATA)malloc(6 + sizeof(PACKET_OID_DATA));// Allocate a buffer to get the MAC adress
-
+	OidData = (PPACKET_OID_DATA)malloc(6 + sizeof(PACKET_OID_DATA));
 	if (OidData == NULL)
 	{
-		PacketCloseAdapter(lpAdapter);// fail to malloc
+		return "None";
 	}
 
-	OidData->Oid = 0x01010101;			// Retrieve the adapter MAC querying the NIC driver
+	OidData->Oid = OID_802_3_CURRENT_ADDRESS;
 	OidData->Length = 6;
 	ZeroMemory(OidData->Data, 6);
 
-	Status = PacketRequest(lpAdapter, FALSE, OidData);
+	lpAdapter = PacketOpenAdapter(adapter_name);
 
-	if (Status) {//retrun value copy OidData to m_MacAddress
-		memcpy(m_MacAddress, (OidData->Data), 6);
+	CString NICardAddress;
+
+	if (PacketRequest(lpAdapter, FALSE, OidData))
+	{
+		NICardAddress.Format("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
+			(OidData->Data)[0],
+			(OidData->Data)[1],
+			(OidData->Data)[2],
+			(OidData->Data)[3],
+			(OidData->Data)[4],
+			(OidData->Data)[5]);
 	}
-	else {
-		printf("error retrieving the MAC address of the adapter!\n");
-	}
 
-	free(OidData);//free OidData
-	PacketCloseAdapter(lpAdapter);//close adapter
-}
-
-unsigned char* CNILayer::getMacAddress()
-{
-	return m_MacAddress;//getMacAddress
+	PacketCloseAdapter(lpAdapter);
+	free(OidData);
+	return NICardAddress;
 }
 
 BOOL CNILayer::Send(unsigned char* ppayload, int nlength)
 {
-	//OID_GEN_MEDIA_CONNECT_STATUS;
-
-	if (pcap_sendpacket(m_pAdapterObjects, ppayload, nlength) != 0)
+	if (pcap_sendpacket(m_AdapterObject, ppayload, nlength))
 	{
-		fprintf(stderr, "\nError sending the packet: \n", pcap_geterr(m_pAdapterObjects));
+		AfxMessageBox("패킷 전송 실패");
 		return FALSE;
 	}
-
 	return TRUE;
 }
 
-unsigned char* CNILayer::Receive()
+BOOL CNILayer::Receive(unsigned char* ppayload)
 {
-	int result;
+	BOOL bSuccess = FALSE;
+
+	// 상위 계층으로 payload 올림
+	bSuccess = mp_aUpperLayer[0]->Receive(ppayload);
+	return bSuccess;
+}
+
+UINT CNILayer::ReadingThread(LPVOID pParam)
+{
 	struct pcap_pkthdr* header;
-	unsigned char data[ETHER_MAX_SIZE];
-	const unsigned char* pkt_data;
-	//make packet's memory
-	memset(data, '\0', ETHER_MAX_SIZE);
-	//pcap_next_ex(receive packet)
-	while ((result = pcap_next_ex(m_pAdapterObjects, &header, &pkt_data)) >= 0) {
-		if (result == 0)
-			continue;
+	const u_char* pkt_data;
+	int result;
 
-		memcpy(data, pkt_data, ETHER_MAX_SIZE);//copy packet
-		return data;//return packet
+	CNILayer* pNI = (CNILayer*)pParam;
+
+	while (pNI->m_thrdSwitch) // 패킷 체크
+	{
+		// 패킷 읽어오기
+		result = pcap_next_ex(pNI->m_AdapterObject, &header, &pkt_data);
+
+		if (result == 0) {
+			//	AfxMessageBox("패킷 없음");
+		}
+		else if (result == 1) {
+			//	AfxMessageBox("패킷 있음");
+			pNI->Receive((u_char*)pkt_data);
+		}
+		else if (result < 0) {
+			//	AfxMessageBox("패킷 오류");
+		}
 	}
 
-	if (result == -1) {//error
-		printf("Error reading the packets : %s\n", pcap_geterr(m_pAdapterObjects));
-		return 0;
-	}
+	return 0;
+}
+
+UINT CNILayer::FileTransferThread(LPVOID pParam)
+{
+	CNILayer* pNI = (CNILayer*)pParam;
 
 	return 0;
 }

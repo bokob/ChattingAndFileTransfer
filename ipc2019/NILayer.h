@@ -13,29 +13,34 @@
 #pragma comment(lib, "packet.lib")
 
 class CNILayer
-	: public CBaseLayer	// CBaseLayer 惑加
+	: public CBaseLayer
 {
+protected:
+	pcap_t* m_AdapterObject;
 
 public:
-	unsigned char*	Receive();
-	BOOL			Send(unsigned char* ppayload, int nlength);	
-	void			SetNICList();
-	void			setAdapterNum(int index);
-	int				getAdapterNum();
-	char*			getAdapterName(int index);
-	void			setMacAddress();
-	unsigned char*	getMacAddress();
+	BOOL			m_thrdSwitch;
+	unsigned char* m_ppayload;
 
-	CNILayer(char* pName, pcap_t* pAdapterObject = NULL, int idxAdapter = 0);	// 积己磊
-	virtual ~CNILayer();		// 家戈磊
+	void			PacketStartDriver();
+	void			PacketEndDriver();
 
-private:
-	unsigned char m_MacAddress[6];
-	char		  m_adapterName[1024];
-	int			  m_selectedNum;
-	int			  m_iNumAdapter;
-	pcap_t*		  m_pAdapterObjects;
-	pcap_if_t*    m_allDevs;
+	pcap_if_t* GetAdapterObject(int iIndex);
+	void			SetAdapterNumber(int iNum);
+	void			SetAdapterList(LPADAPTER* plist);
+	CString			GetNICardAddress(char* adapter_name);
+	static UINT		ReadingThread(LPVOID pParam);
+	static UINT		FileTransferThread(LPVOID pParam);
+
+	BOOL			Receive(unsigned char* ppayload);
+	BOOL			Send(unsigned char* ppayload, int nlength);
+
+	CNILayer(char* pName, LPADAPTER* pAdapterObject = NULL, int iNumAdapter = 0);
+	virtual ~CNILayer();
+
+protected:
+	int			m_iNumAdapter;
+	pcap_if_t* m_pAdapterList[NI_COUNT_NIC];
 };
 
 #endif // !defined(AFX_FILELAYER_H__D67222B3_1B00_4C77_84A4_CEF6D572E181__INCLUDED_)

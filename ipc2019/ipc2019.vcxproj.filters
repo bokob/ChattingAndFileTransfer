@@ -51,7 +51,7 @@
     <ClInclude Include="NILayer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="NICData.h">
+    <ClInclude Include="FileAppLayer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -80,7 +80,7 @@
     <ClCompile Include="NILayer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="NICData.cpp">
+    <ClCompile Include="FileAppLayer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

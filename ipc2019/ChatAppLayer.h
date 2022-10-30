@@ -12,35 +12,33 @@
 
 #include "BaseLayer.h"
 #include "pch.h"
+#include "BaseLayer.h"
+//#include "TCPLayer.h"
+
 class CChatAppLayer
-	: public CBaseLayer	// CBaseLayer 상속
+	: public CBaseLayer
 {
 private:
-	inline void		ResetHeader();	// 헤더 초기화
-	CObject* mp_Dlg;				// MFC가리키는 것
+	inline void		ResetHeader();
+	CObject* mp_Dlg;
 
 public:
-	unsigned char*			Receive(int ThreadType);				// CEthernet계층에서 수신
-	BOOL			Send(unsigned char* ppayload, int nlength, unsigned char type);		// CEthernet계층으로 전송
+	unsigned char* m_ppayload;
+	int				m_length;
 
-	unsigned int	GetDestinAddress();								// 헤더에 들어있는 도착주소를 반환한다.
-	unsigned int	GetSourceAddress();								// 헤더에 들어있는 시작주소를 반환한다.
-	void			SetDestinAddress(unsigned int dst_addr);		// 헤더의 도착하는 주소 설정
-	void			SetSourceAddress(unsigned int src_addr);		// 헤더의 시작하는 주소 설정
+	BOOL			Receive(unsigned char* ppayload);
+	BOOL			Send(unsigned char*, int);
 
-	CChatAppLayer(char* pName);		// 생성자
-	virtual ~CChatAppLayer();		// 소멸자
+	static UINT		ChatThread(LPVOID pParam);
+
+	CChatAppLayer(char* pName);
+	virtual ~CChatAppLayer();
 
 	typedef struct _CHAT_APP_HEADER {
-
-		unsigned short	app_length;				// total length of the data
-		unsigned char	app_unused;				// 우선 사용안함
-		/*
-		unsigned int	app_dstaddr;			// destination address of application layer
-		unsigned int	app_srcaddr;			// source address of application layer
-		*/
-		unsigned char	app_type;				// type of application data
-		unsigned char	app_data[APP_DATA_SIZE];// application data
+		unsigned long	capp_seq_num;
+		unsigned short	capp_totlen;
+		unsigned char	capp_type;
+		unsigned char	capp_data[APP_DATA_SIZE];
 
 	} CHAT_APP_HEADER, * PCHAT_APP_HEADER;
 
@@ -48,6 +46,7 @@ protected:
 	CHAT_APP_HEADER		m_sHeader;
 
 	enum {
+		DATA_TYPE_BEGIN = 0x00,
 		DATA_TYPE_CONT = 0x01,
 		DATA_TYPE_END = 0x02
 	};

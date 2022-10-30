@@ -35,8 +35,8 @@
 #define CHAT_REC				0x01 
 #define CHAT_NOTREC				0x02
 
-#define CHAT_TYPE				0x1010
-#define FILE_TYPE				0x2020
+#define CHAT_TYPE				0x10
+#define FILE_TYPE				0x20
 
 // App 헤더 크기, App 데이터 크기
 #define APP_HEADER_SIZE			( sizeof(unsigned int) * 2 +				\
@@ -45,6 +45,28 @@
 #define APP_DATA_SIZE			( ETHER_MAX_DATA_SIZE - ( APP_HEADER_SIZE +		\
 												          TCP_HEADER_SIZE +		\
 												          IP_HEADER_SIZE ) )
+
+#define FILE_APP_HEADER_SIZE	( sizeof(unsigned long) * 2  +	\
+								  sizeof(unsigned short) +		\
+								  sizeof(unsigned char) * 2 )
+#define FILE_APP_DATA_SIZE		(ETHER_MAX_DATA_SIZE - FILE_APP_HEADER_SIZE )
+
+#define NI_COUNT_NIC			16
+
+typedef struct _ETHERNET_ADDR
+{
+	union {
+		struct { unsigned char e0, e1, e2, e3, e4, e5; } s_un_byte;
+		unsigned char s_ether_addr[6];
+	} S_un;
+#define addr0 S_un.s_un_byte.e0
+#define addr1 S_un.s_un_byte.e1
+#define addr2 S_un.s_un_byte.e2
+#define addr3 S_un.s_un_byte.e3
+#define addr4 S_un.s_un_byte.e4
+#define addr5 S_un.s_un_byte.e5
+#define addrs S_un.s_ether_addr
+} ETHERNET_ADDR, * LPETHERNET_ADDR;
 
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 

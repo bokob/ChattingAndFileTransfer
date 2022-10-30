@@ -30,13 +30,11 @@ public:
 
 	// param : unsigned char*	- the data of the upperlayer
 	//         int				- the length of data
-	virtual BOOL	Send(unsigned char*, int, unsigned char) { return FALSE; }	// ChatAppLayer에서 쓰이는 함수
 	virtual	BOOL	Send(unsigned char*, int) { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층으로 전송
 	// param : unsigned char*	- the data of the underlayer	
 	virtual	BOOL	Receive(unsigned char* ppayload) { return FALSE; }	// Dlg Layer에서 쓰이는 함수, 다른 계층에서 수신
-	virtual	unsigned char*	Receive(int) { return FALSE; }	// ChatApp, FileApp Layer에서 쓰이는 함수, 다른 계층에서 수신
-	virtual	unsigned char*	Receive() { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층에서 수신
-
+	virtual	BOOL	Receive() { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층에서 수신
+	
 protected:
 	char* m_pLayerName;		// 계층 이름
 	CBaseLayer* mp_UnderLayer;							// UnderLayer pointer

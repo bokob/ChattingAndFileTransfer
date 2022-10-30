@@ -7,7 +7,8 @@
 #include "LayerManager.h"	// Added by ClassView
 #include "ChatAppLayer.h"	// Added by ClassView
 #include "EthernetLayer.h"	// Added by ClassView
-//#include "FileLayer.h"	// Added by ClassView
+#include "FileAppLayer.h"	// Added by ClassView
+#include "NILayer.h"
 // Cipc2019Dlg 대화 상자
 class Cipc2019Dlg : public CDialogEx, public CBaseLayer
 {
@@ -52,7 +53,7 @@ public:
 public:
 	BOOL			Receive(unsigned char* ppayload);
 	inline void		SendData();		// ChatAppLayer로 메시지 전송
-	BOOL			ConvertHex(CString cs, unsigned char* hex);
+	unsigned char* MacAddrToHexInt(CString ether);
 
 private:
 	CLayerManager	m_LayerMgr;
@@ -83,15 +84,17 @@ private:
 	unsigned char  m_dstMacAddress[6];	// 목적지 Mac 주소
  
 	// Object App
-	CChatAppLayer* m_ChatApp;
-	CEthernetLayer* m_Ether;
-	//CFileAppLayer* m_FileApp;
-	CNILayer* m_NI;
+	CChatAppLayer*	m_ChatApp;
+	CFileAppLayer*	m_FileApp;
+	CEthernetLayer*	m_Ether;
+	CNILayer*		m_NI;
 
 	// Implementation
 	UINT			m_wParam;
 	DWORD			m_lParam;
 public:
+
+	BOOL		FileSended;
 
 	CWinThread* m_RecvThread;
 	static UINT	ReceiveThread(LPVOID pParam);
@@ -106,6 +109,7 @@ public:
 	CString m_unSrcAddr;
 	CString m_fileAdd;
 	CProgressCtrl m_progress;
+	CEdit		  m_EditDstAddr;
 	afx_msg void OnBnClickedButtonFileAdd();
 	afx_msg void OnBnClickedButtonFileTransfer();
 	afx_msg void OnCbnSelchangeCombo1();

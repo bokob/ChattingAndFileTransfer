@@ -16,110 +16,67 @@ static char THIS_FILE[] = __FILE__;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CEthernetLayer::CEthernetLayer(char* pName)	 
-	: CBaseLayer(pName) // CBaseLayer에서 상속받는다. 입력받은 인자로 CBaseLayer의 생성자 실행
+CEthernetLayer::CEthernetLayer(char* pName)
+	: CBaseLayer(pName)
 {
-	ResetHeader();				// 헤더 초기화
+	ResetHeader();
 }
 
-CEthernetLayer::~CEthernetLayer()	// 소멸자
+CEthernetLayer::~CEthernetLayer()
 {
 }
 
-void CEthernetLayer::ResetHeader()	// 헤더 초기화
+void CEthernetLayer::ResetHeader()
 {
-	memset(m_sHeader.enet_dstaddr, 0, 6);
-	memset(m_sHeader.enet_srcaddr, 0, 6);
-	memset(m_sHeader.enet_data, ETHER_MAX_DATA_SIZE, 6);
-	m_sHeader.enet_type = 0;
+	memset(m_sHeader.enet_dstaddr.addrs, 0, 6);
+	memset(m_sHeader.enet_srcaddr.addrs, 0, 6);
+	memset(m_sHeader.enet_data, 0, ETHER_MAX_DATA_SIZE);
+	m_sHeader.enet_type = 0x3412; // 0x0800
 }
 
-unsigned char* CEthernetLayer::GetSourceAddress()
-// 헤더에 들어있는 시작주소를 반환한다.
+unsigned char* CEthernetLayer::GetEnetDstAddress()
 {
-	return m_sHeader.enet_srcaddr;
+	return m_sHeader.enet_srcaddr.addrs;
 }
 
-unsigned char* CEthernetLayer::GetDestinAddress()
-// 헤더에 들어있는 도착주소를 반환한다.
+unsigned char* CEthernetLayer::GetEnetSrcAddress()
 {
-	//////////////////////// fill the blank ///////////////////////////////
-	// Ethernet 목적지 주소 return
-	return m_sHeader.enet_dstaddr;
-	///////////////////////////////////////////////////////////////////////
+	return m_sHeader.enet_dstaddr.addrs;
 }
 
-void CEthernetLayer::SetSourceAddress(unsigned char* pAddress)
+void CEthernetLayer::SetEnetSrcAddress(unsigned char* pAddress)
 {
-	//////////////////////// fill the blank ///////////////////////////////
-		// 넘겨받은 source 주소를 Ethernet source주소로 지정
-	memcpy(m_sHeader.enet_srcaddr, pAddress, 6);
-	///////////////////////////////////////////////////////////////////////
+	memcpy(m_sHeader.enet_srcaddr.addrs, pAddress, 6);
 }
 
-void CEthernetLayer::SetDestinAddress(unsigned char* pAddress)
-// 넘겨받은 목적지 주소를 Ethernet destination주소로 지정
+void CEthernetLayer::SetEnetDstAddress(unsigned char* pAddress)
 {
-	memcpy(m_sHeader.enet_dstaddr, pAddress, 6);
+	memcpy(m_sHeader.enet_dstaddr.addrs, pAddress, 6);
 }
 
 BOOL CEthernetLayer::Send(unsigned char* ppayload, int nlength)
 {
-	// ChatApp 계층에서 받은 App 계층의 Frame 길이만큼을 Ethernet계층의 data로 넣는다.
 	memcpy(m_sHeader.enet_data, ppayload, nlength);
 
 	BOOL bSuccess = FALSE;
-	//////////////////////// fill the blank ///////////////////////////////
 
-		// Ethernet Data + Ethernet Header의 사이즈를 합한 크기만큼의 Ethernet Frame을
-		// File 계층으로 보낸다.
 	bSuccess = mp_UnderLayer->Send((unsigned char*)&m_sHeader, nlength + ETHER_HEADER_SIZE);
-	///////////////////////////////////////////////////////////////////////
+
 	return bSuccess;
 }
 
-unsigned char* CEthernetLayer::Receive()
+BOOL CEthernetLayer::Receive(unsigned char* ppayload)
 {
-	unsigned char* ppayload = mp_UnderLayer->Receive();
-
-	unsigned char ed[6];
-	unsigned char es[6];
-	memset(ed, 0, 6);
-	memset(es, 0, 6);
-
-	if (ppayload != NULL)
-	{
-		PETHERNET_HEADER pFrame = (PETHERNET_HEADER)ppayload;
-
-		BOOL bSuccess = FALSE;
-		memcpy(ed, pFrame->enet_dstaddr, 6);
-		memcpy(ed, pFrame->enet_srcaddr, 6);
-
-		int flag = 0;
-		for (int i = 0; i < 6; i++)
-		{
-			if ((ed[i] != m_sHeader.enet_srcaddr[i]) || (es[i] == m_sHeader.enet_srcaddr[i])) 
-			{//des and MacAdress comapre + des and F(broadcast) comapre + src and MacAdress comapre
-				flag = 1;
-				break;
-			}
-			if (!flag)	//is sucess to comapre and go upper layer
-			{
-				return pFrame->enet_data;
-			}
-		}
-	}
-
-	return 0;
-	/*
 	PETHERNET_HEADER pFrame = (PETHERNET_HEADER)ppayload;
 
 	BOOL bSuccess = FALSE;
-	//////////////////////// fill the blank ///////////////////////////////
-		// ChatApp 계층으로 Ethernet Frame의 data를 넘겨준다.
-	bSuccess = mp_aUpperLayer[0]->Receive((unsigned char*)pFrame->enet_data);
-	///////////////////////////////////////////////////////////////////////
 
+	if ((memcmp((char*)pFrame->enet_dstaddr.S_un.s_ether_addr, (char*)m_sHeader.enet_srcaddr.S_un.s_ether_addr, 6) == 0 &&
+		memcmp((char*)pFrame->enet_srcaddr.S_un.s_ether_addr, (char*)m_sHeader.enet_srcaddr.S_un.s_ether_addr, 6) != 0))
+	{
+		if (ntohs(pFrame->enet_type) == 0x1234) { // Ethernet Frametype 검사
+			bSuccess = mp_aUpperLayer[0]->Receive((unsigned char*)pFrame->enet_data);
+		}
+	}
 	return bSuccess;
-	*/
 }
