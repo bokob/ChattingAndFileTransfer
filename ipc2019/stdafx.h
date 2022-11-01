@@ -35,8 +35,8 @@
 #define CHAT_REC				0x01 
 #define CHAT_NOTREC				0x02
 
-#define CHAT_TYPE				0x10
-#define FILE_TYPE				0x20
+#define CHAT_TYPE				0x1010
+#define FILE_TYPE				0x2020
 
 // App 헤더 크기, App 데이터 크기
 #define APP_HEADER_SIZE			( sizeof(unsigned int) * 2 +				\

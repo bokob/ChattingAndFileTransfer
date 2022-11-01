@@ -27,7 +27,7 @@ public:
 	int				m_length;
 
 	BOOL			Receive(unsigned char* ppayload);
-	BOOL			Send(unsigned char*, int);
+	BOOL			Send(unsigned char* ppayload, int nlength, unsigned char type);
 
 	static UINT		ChatThread(LPVOID pParam);
 

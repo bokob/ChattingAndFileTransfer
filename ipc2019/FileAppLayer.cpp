@@ -93,7 +93,8 @@ BOOL CFileAppLayer::Receive(unsigned char* ppayload)
 
 		return bSuccess;
 	}
-	if (pFrame->fapp_type == 1 && pFrame->fapp_msg_type == 0) {
+	if (pFrame->fapp_type == 1 && pFrame->fapp_msg_type == 0) 
+	{
 
 		/*	if (pFrame->fapp_seq_num-iNAK>1) {
 				//재전송
@@ -104,15 +105,14 @@ BOOL CFileAppLayer::Receive(unsigned char* ppayload)
 
 			}*/
 
-		if (pFrame->fapp_tollen < FILE_APP_DATA_SIZE) {
+		if (pFrame->fapp_tollen < FILE_APP_DATA_SIZE)
 			memcpy(file_buff[pFrame->fapp_seq_num], pFrame->fapp_data, pFrame->fapp_tollen);
-		}
-		else {
+		else
 			memcpy(file_buff[pFrame->fapp_seq_num], pFrame->fapp_data, FILE_APP_DATA_SIZE);
-		}
 	}
 
-	if (pFrame->fapp_type == 2 && pFrame->fapp_msg_type == 0) {
+	if (pFrame->fapp_type == 2 && pFrame->fapp_msg_type == 0) 
+	{
 		bThread = FALSE;
 		bS_first = FALSE;
 		bS_second = FALSE;
@@ -121,20 +121,21 @@ BOOL CFileAppLayer::Receive(unsigned char* ppayload)
 		bR_ack = FALSE;
 		dataSize = pFrame->fapp_tollen;
 		frag_count = (dataSize / FILE_APP_DATA_SIZE) + 1;
-		for (int i = 0; i < frag_count; i++) {
+		for (int i = 0; i < frag_count; i++) 
+		{
 			int size;
-			if (i < frag_count - 1) { //중간파일 보내기
+			if (i < frag_count - 1) //중간파일 보내기
 				size = FILE_APP_DATA_SIZE;
-			}
-			else {//마지막 데이터를 나타내는 type 설정
+			else //마지막 데이터를 나타내는 type 설정
 				size = dataSize % FILE_APP_DATA_SIZE;
-			}
+
 			fwrite(file_buff[i], size, 1, fp);//fp에 file_buff 넣어주기.
 		}
 		fclose(fp);
 	}
 
-	if (pFrame->fapp_type == 0 && pFrame->fapp_msg_type == 1) {
+	if (pFrame->fapp_type == 0 && pFrame->fapp_msg_type == 1) 
+	{
 		bS_first = FALSE;
 		bS_second = TRUE;
 		bS_third = FALSE;
@@ -157,8 +158,10 @@ UINT CFileAppLayer::FileThread(LPVOID pParam) {
 	FILE* file_pointer = NULL;
 
 
-	while (cFile->bThread) {
-		if (cFile->bS_first) {
+	while (cFile->bThread) 
+	{
+		if (cFile->bS_first) 
+		{
 			cFile->bS_first = FALSE;
 			if (cFile->path.GetLength() > 1)
 			{

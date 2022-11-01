@@ -80,18 +80,19 @@ Cipc2019Dlg::Cipc2019Dlg(CWnd* pParent /*=nullptr*/)
 
 	//Protocol Layer Setting
 	m_LayerMgr.AddLayer(new CChatAppLayer("ChatApp"));
-	m_LayerMgr.AddLayer(new CFileAppLayer("FileApp"));
+	//m_LayerMgr.AddLayer(new CFileAppLayer("FileApp"));
 	m_LayerMgr.AddLayer(new CEthernetLayer("Ethernet"));
 	m_LayerMgr.AddLayer(new CNILayer("NI"));
 	m_LayerMgr.AddLayer(this);
 
 	// 레이어를 연결한다. (레이어 생성)
-	m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) *FileApp ( +ChatDlg ) ) )");
+	m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) ) )");
+	//m_LayerMgr.ConnectLayers("NI ( *Ethernet ( *ChatApp ( *ChatDlg ) *FileApp ( +ChatDlg ) ) )");
 
 	m_NI = (CNILayer*)m_LayerMgr.GetLayer("NI");
 	m_Ether = (CEthernetLayer*)m_LayerMgr.GetLayer("Ethernet");
 	m_ChatApp = (CChatAppLayer*)m_LayerMgr.GetLayer("ChatApp");
-	m_FileApp = (CFileAppLayer*)m_LayerMgr.GetLayer("FileApp");
+	//m_FileApp = (CFileAppLayer*)m_LayerMgr.GetLayer("FileApp");
 	//Protocol Layer Setting
 }
 
@@ -140,7 +141,6 @@ END_MESSAGE_MAP()
 
 
 // Cipc2019Dlg 메시지 처리기
-
 BOOL Cipc2019Dlg::OnInitDialog()	// 로그인 다이얼로그 생성
 {
 	CDialogEx::OnInitDialog();	// 로그인 다이얼롤그 생성
@@ -298,55 +298,25 @@ void Cipc2019Dlg::SendData()	// ChatAppLayer로 메시지 전송
 		{
 			if (len == 0)
 			{
-				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE);
+				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE, CHAT_TYPE);
 				len += APP_DATA_SIZE;
 			}
 			else
 			{
 				if (m_stMessage.GetLength() - len < APP_DATA_SIZE)	// 단편화 했을 때, 마지막 조각인 경우 
 				{
-					this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, m_stMessage.GetLength() - len), m_stMessage.GetLength() - len);
+					this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, m_stMessage.GetLength() - len), m_stMessage.GetLength() - len, CHAT_TYPE);
 					break;
 				}
-				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE);
+				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE, CHAT_TYPE);
 				len += APP_DATA_SIZE;
 			}
 		}
 	}
 	else   // 메시지 길이가 1496 이하인 경우 
 	{
-		this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage, m_stMessage.GetLength());
+		this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage, m_stMessage.GetLength(), CHAT_TYPE);
 	}
-
-
-
-	/*
-	if (nlength > 1496) // 메시지 길이가 1496보다 클 경우
-	{
-
-	}
-	else    // 메시지 길이가 1496 이하일 경우
-	{
-		unsigned char* ppayload = new unsigned char[nlength + 1];
-		memcpy(ppayload, (unsigned char*)(LPCTSTR)m_stMessage, nlength);
-		ppayload[nlength] = '\0';
-
-
-		// 보낼 data와 메시지 길이를 Send함수로 넘겨준다.
-		m_ChatApp->Send(ppayload, nlength);
-	}
-	*/
-
-
-	/*
-	unsigned char* ppayload = new unsigned char[nlength + 1];
-	memcpy(ppayload, (unsigned char*)(LPCTSTR)m_stMessage, nlength);
-	ppayload[nlength] = '\0';
-
-
-	// 보낼 data와 메시지 길이를 Send함수로 넘겨준다.
-	m_ChatApp->Send(ppayload, nlength);
-	*/
 }
 
 BOOL Cipc2019Dlg::Receive(unsigned char* ppayload) // ChatAppLayer로부터 메시지 수신
@@ -387,15 +357,6 @@ BOOL Cipc2019Dlg::Receive(unsigned char* ppayload) // ChatAppLayer로부터 메�
 	}
 
 	return TRUE;
-
-	/*
-	if (m_nAckReady == -1)
-	{
-	}
-
-	m_ListChat.AddString((LPCTSTR)ppayload);
-	return TRUE;
-	*/
 }
 
 BOOL Cipc2019Dlg::PreTranslateMessage(MSG* pMsg)
@@ -417,7 +378,6 @@ BOOL Cipc2019Dlg::PreTranslateMessage(MSG* pMsg)
 
 	return CDialog::PreTranslateMessage(pMsg);
 }
-
 
 void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 {
@@ -451,16 +411,6 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 		break;
 	case IPC_WAITFORACK:	break;
 	case IPC_ERROR:		break;
-		/*
-		case IPC_UNICASTMODE:
-			m_unDstAddr = 0x0;
-			pDstEdit->EnableWindow(TRUE);
-			break;
-		case IPC_BROADCASTMODE:
-			m_unDstAddr = 0xff;
-			pDstEdit->EnableWindow(FALSE);
-			break;
-		*/
 	case IPC_ADDR_SET:
 		pSetAddrButton->SetWindowText(_T("재설정(&R)"));
 		pSrcEdit->EnableWindow(FALSE);
@@ -471,16 +421,10 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 		pFAButton->EnableWindow(TRUE);
 		pFAEdit->EnableWindow(TRUE);
 		pFTButton->EnableWindow(TRUE);
-		//pChkButton->EnableWindow(FALSE);
 		break;
 	case IPC_ADDR_RESET:
 		pSetAddrButton->SetWindowText(_T("설정(&O)"));
 		pSrcEdit->EnableWindow(FALSE);
-		/*
-		if (!pChkButton->GetCheck())
-			pDstEdit->EnableWindow(TRUE);
-		pChkButton->EnableWindow(TRUE);
-		*/
 		pDstEdit->EnableWindow(TRUE);
 		m_ListChat.EnableWindow(FALSE);
 		pSendButton->EnableWindow(FALSE);
@@ -490,10 +434,6 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 		pFTButton->EnableWindow(FALSE);
 		m_unSrcAddr = "";
 		m_unDstAddr = "";
-		/*
-		m_Ether->SetSourceAddress((unsigned char*)"00000000");
-		m_Ether->SetDestinAddress((unsigned char*)"00000000");
-		*/
 		break;
 	case IPC_SET_FileOn://button text change
 		pFTButton->SetWindowText("취소");
@@ -504,7 +444,6 @@ void Cipc2019Dlg::SetDlgState(int state)	// 영역별 들어갈 내용
 
 
 	}
-
 	UpdateData(FALSE);
 }
 
@@ -553,36 +492,39 @@ void Cipc2019Dlg::OnTimer(UINT nIDEvent)	// 타이머
 
 void Cipc2019Dlg::OnBnClickedButtonAddr()	// 설정 버튼 눌렀을 때 일어나는 이벤트
 {
+	
+
 	UpdateData(TRUE);
 
-	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-	unsigned char* eth_temp = MacAddrToHexInt(m_unSrcAddr);
-	ETHERNET_ADDR srcaddr;
-	srcaddr.addr0 = eth_temp[0];
-	srcaddr.addr1 = eth_temp[1];
-	srcaddr.addr2 = eth_temp[2];
-	srcaddr.addr3 = eth_temp[3];
-	srcaddr.addr4 = eth_temp[4];
-	srcaddr.addr5 = eth_temp[5];
+	if (!m_bSendReady) {
+		// if not Setup, make m_bSendReady = TRUE
+		m_bSendReady = TRUE;
+		SetDlgState(IPC_ADDR_SET);
 
+		unsigned char* eth_temp = MacAddrToHexInt(m_unSrcAddr);
+		ETHERNET_ADDR srcaddr;
+		srcaddr.addr0 = eth_temp[0];
+		srcaddr.addr1 = eth_temp[1];
+		srcaddr.addr2 = eth_temp[2];
+		srcaddr.addr3 = eth_temp[3];
+		srcaddr.addr4 = eth_temp[4];
+		srcaddr.addr5 = eth_temp[5];
 
-	CString temp;
-	ETHERNET_ADDR dstaddr;
-
-	m_EditDstAddr.GetWindowTextA(m_unDstAddr);
-	for (int i = 0; i < 6; i++)
-	{
-		AfxExtractSubString(temp, (m_unDstAddr), i, ':');
-		dstaddr.addrs[i] = strtol(temp, NULL, 16);
+		ConvertHex(m_unDstAddr, m_dstMacAddress);
+		m_Ether->SetEnetSrcAddress(srcaddr.addrs);
+		m_Ether->SetEnetDstAddress(m_dstMacAddress);
+		//m_FileApp->StartFileThread();
+		m_NI->PacketStartDriver();
+		
 	}
-
-
-	m_Ether->SetEnetSrcAddress(srcaddr.addrs);
-	m_Ether->SetEnetDstAddress(dstaddr.addrs);
-	m_FileApp->StartFileThread();
-	m_NI->PacketStartDriver();
-	
+	else 
+	{
+		// rebutton make not Ready
+		m_bSendReady = FALSE;
+		SetDlgState(IPC_ADDR_RESET);
+	}
 	UpdateData(FALSE);
+
 }
 
 void Cipc2019Dlg::OnBnClickedCheckToall()	// 클릭 못하게 조절
@@ -610,20 +552,22 @@ void Cipc2019Dlg::OnBnClickedButtonFileAdd()
 }
 
 
+
 void Cipc2019Dlg::OnBnClickedButtonFileTransfer()
 {
-	
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 	UpdateData(TRUE);
 
 	if (!m_fileAdd.IsEmpty())
-		if (!FileSended) {
+		if (!FileSended) 
+		{
 			FileSended = TRUE;//file Transfering
 			CWinThread* m_FileThread = ::AfxBeginThread(CFileAppLayer::FileThread, this);
 			SetDlgState(IPC_SET_FileOn);
 
 		}
-		else {
+		else 
+		{
 			SetDlgState(IPC_SET_FileOff);
 			FileSended = FALSE;//init
 		}
@@ -631,14 +575,12 @@ void Cipc2019Dlg::OnBnClickedButtonFileTransfer()
 		AfxMessageBox("Select a file to send first!");
 
 	UpdateData(FALSE);
-	
 }
 
 
 void Cipc2019Dlg::OnCbnSelchangeCombo1()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-
 	UpdateData(TRUE);
 	// NICard 이름으로 Mac address 가져오기
 	CComboBox* pEX_EtherComboBox = (CComboBox*)GetDlgItem(IDC_COMBO1);
@@ -662,7 +604,8 @@ unsigned char* Cipc2019Dlg::MacAddrToHexInt(CString ether)
 	CString cstr;
 	unsigned char* file_ether = (u_char*)malloc(sizeof(u_char) * 6);
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 6; i++) 
+	{
 		AfxExtractSubString(cstr, ether, i, ':');
 		// strtoul -> 문자열을 원하는 진수로 변환 시켜준다.
 		file_ether[i] = (unsigned char)strtoul(cstr.GetString(), NULL, 16);
@@ -670,4 +613,23 @@ unsigned char* Cipc2019Dlg::MacAddrToHexInt(CString ether)
 	file_ether[6] = '\0';
 
 	return file_ether;
+}
+
+BOOL Cipc2019Dlg::ConvertHex(CString cs, unsigned char* hex) // 문자열을 Hex로 바꾸는 함수
+{
+	int i;
+	char* srcStr = cs.GetBuffer(0);
+
+	for (i = 0; i < 12; i++) 
+	{
+		// error
+		if (srcStr[i] < '0' || (srcStr[i] > '9' && srcStr[i] < 'a') || srcStr[i] > 'f')
+			return FALSE;
+	}
+	for (i = 0; i < 12; i = i + 2) 
+	{
+		hex[i / 2] = (((srcStr[i] > '9') ? (srcStr[i] - 87) : (srcStr[i] - '0')) << 4 |
+			((srcStr[i + 1] > '9') ? (srcStr[i + 1] - 87) : (srcStr[i + 1] - '0')));
+	}
+	return TRUE;
 }

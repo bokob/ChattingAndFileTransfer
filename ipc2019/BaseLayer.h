@@ -31,6 +31,7 @@ public:
 	// param : unsigned char*	- the data of the upperlayer
 	//         int				- the length of data
 	virtual	BOOL	Send(unsigned char*, int) { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층으로 전송
+	virtual BOOL	Send(unsigned char* ppayload, int nlength, unsigned char type) { return FALSE; }
 	// param : unsigned char*	- the data of the underlayer	
 	virtual	BOOL	Receive(unsigned char* ppayload) { return FALSE; }	// Dlg Layer에서 쓰이는 함수, 다른 계층에서 수신
 	virtual	BOOL	Receive() { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층에서 수신

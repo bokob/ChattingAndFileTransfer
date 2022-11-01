@@ -35,17 +35,21 @@ void CChatAppLayer::ResetHeader()
 	memset(m_sHeader.capp_data, 0, APP_DATA_SIZE);
 }
 
-BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength)
+BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength, unsigned char type)
 {
 	m_sHeader.capp_totlen = (unsigned short)nlength;
+
 	BOOL bSuccess = FALSE;
-
-	m_sHeader.capp_type = CHAT_TYPE;
-
-	memcpy(m_sHeader.capp_data, ppayload, nlength);
-
+	m_sHeader.capp_type = type;
+	//////////////////////// fill the blank ///////////////////////////////
+		// 메모리 복사로 데이터를 header에 저장
+		// ChatApp 레이어의 헤더에 데이터와 그 길이를 저장한다.
+	memcpy(m_sHeader.capp_data, ppayload, nlength > APP_DATA_SIZE ? APP_DATA_SIZE : nlength);
+	// ChatApp 레이어의 밑에 레이어인 Ethertnet 레이어에 데이터를 넘겨준다.
+	// 메모리 참조로 ChatApp의(헤더 + 데이터)와 (데이터 길이+헤더길이)를
+	// 다음 계층의 data로 넘겨준다.
 	bSuccess = mp_UnderLayer->Send((unsigned char*)&m_sHeader, nlength + APP_HEADER_SIZE);
-
+	///////////////////////////////////////////////////////////////////////
 	return bSuccess;
 }
 
@@ -54,7 +58,8 @@ BOOL CChatAppLayer::Receive(unsigned char* ppayload)
 	PCHAT_APP_HEADER capp_hdr = (PCHAT_APP_HEADER)ppayload;
 	static unsigned char* GetBuff;
 
-	if (capp_hdr->capp_totlen <= APP_DATA_SIZE) {
+	if (capp_hdr->capp_totlen <= APP_DATA_SIZE) 
+	{
 		GetBuff = (unsigned char*)malloc(capp_hdr->capp_totlen);
 		memset(GetBuff, 0, capp_hdr->capp_totlen);
 		memcpy(GetBuff, capp_hdr->capp_data, capp_hdr->capp_totlen);

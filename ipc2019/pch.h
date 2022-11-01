@@ -13,7 +13,7 @@
 #include "LayerManager.h"
 #include "ipc2019Dlg.h"
 #include "ChatAppLayer.h"
-#include "FileAppLayer.h"
+//#include "FileAppLayer.h"
 #include "EthernetLayer.h"
 #include "NILayer.h"
 

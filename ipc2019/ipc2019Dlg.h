@@ -53,8 +53,8 @@ public:
 public:
 	BOOL			Receive(unsigned char* ppayload);
 	inline void		SendData();		// ChatAppLayer로 메시지 전송
-	unsigned char* MacAddrToHexInt(CString ether);
-
+	unsigned char*	MacAddrToHexInt(CString ether);
+	BOOL			ConvertHex(CString cs, unsigned char* hex);
 private:
 	CLayerManager	m_LayerMgr;
 	int				m_nAckReady;
