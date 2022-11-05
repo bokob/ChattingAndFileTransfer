@@ -25,13 +25,15 @@ void CNILayer::PacketStartDriver()
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	if (m_iNumAdapter == -1) {
+	if (m_iNumAdapter == -1) 
+	{
 		AfxMessageBox("Not exist NICard");
 		return;
 	}
 
-	m_AdapterObject = pcap_open_live(m_pAdapterList[m_iNumAdapter]->name, 1500, PCAP_OPENFLAG_PROMISCUOUS, 2000, errbuf);
-	if (!m_AdapterObject) {
+	m_AdapterObject = pcap_open_live(m_pAdapterList[m_iNumAdapter]->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, errbuf);
+	if (!m_AdapterObject) 
+	{
 		AfxMessageBox(errbuf);
 		return;
 	}
@@ -126,14 +128,17 @@ BOOL CNILayer::Send(unsigned char* ppayload, int nlength)
 		AfxMessageBox("패킷 전송 실패");
 		return FALSE;
 	}
+	AfxMessageBox("패킷 전송 성성공공!");
 	return TRUE;
 }
 
-BOOL CNILayer::Receive(unsigned char* ppayload)
+BOOL CNILayer::Receive(unsigned char* ppayload) // 채팅 수신
 {
 	BOOL bSuccess = FALSE;
 
-	// 상위 계층으로 payload 올림
+	AfxMessageBox("수신");
+
+	// 상위 계층으로 ppayload 올림
 	bSuccess = mp_aUpperLayer[0]->Receive(ppayload);
 	return bSuccess;
 }
@@ -152,14 +157,14 @@ UINT CNILayer::ReadingThread(LPVOID pParam)
 		result = pcap_next_ex(pNI->m_AdapterObject, &header, &pkt_data);
 
 		if (result == 0) {
-			//	AfxMessageBox("패킷 없음");
+				//AfxMessageBox("패킷 없음");
 		}
 		else if (result == 1) {
-			//	AfxMessageBox("패킷 있음");
+				//AfxMessageBox("패킷 있음");
 			pNI->Receive((u_char*)pkt_data);
 		}
 		else if (result < 0) {
-			//	AfxMessageBox("패킷 오류");
+				//AfxMessageBox("패킷 오류");
 		}
 	}
 

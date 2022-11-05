@@ -190,7 +190,7 @@ BOOL Cipc2019Dlg::OnInitDialog()	// 로그인 다이얼로그 생성
 	}
 	p_EtherComboBox->SetCurSel(0);
 
-	CString inNicName = m_NI->GetAdapterObject(0)->name;
+	CString inNicName = m_NI->GetAdapterObject(0)->description;
 	
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
@@ -288,35 +288,11 @@ void Cipc2019Dlg::SendData()	// ChatAppLayer로 메시지 전송
 	m_ListChat.AddString(MsgHeader + m_stMessage);
 
 	int nlength = m_stMessage.GetLength();
+	unsigned char* ppayload = new unsigned char[nlength + 1];
+	memcpy(ppayload, (unsigned char*)(LPCTSTR)m_stMessage, nlength);
+	ppayload[nlength] = '\0';
 
-	int len = 0;
-
-	//////////////////////////////segemantation APP_DATA
-	if (m_stMessage.GetLength() > APP_DATA_SIZE) // 메시지 길아가 1496 초과인 경우
-	{
-		while (1)
-		{
-			if (len == 0)
-			{
-				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE, CHAT_TYPE);
-				len += APP_DATA_SIZE;
-			}
-			else
-			{
-				if (m_stMessage.GetLength() - len < APP_DATA_SIZE)	// 단편화 했을 때, 마지막 조각인 경우 
-				{
-					this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, m_stMessage.GetLength() - len), m_stMessage.GetLength() - len, CHAT_TYPE);
-					break;
-				}
-				this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage.Mid(len, APP_DATA_SIZE), APP_DATA_SIZE, CHAT_TYPE);
-				len += APP_DATA_SIZE;
-			}
-		}
-	}
-	else   // 메시지 길이가 1496 이하인 경우 
-	{
-		this->mp_UnderLayer->Send((unsigned char*)(LPCTSTR)m_stMessage, m_stMessage.GetLength(), CHAT_TYPE);
-	}
+	m_ChatApp->Send(ppayload, nlength + 1);
 }
 
 BOOL Cipc2019Dlg::Receive(unsigned char* ppayload) // ChatAppLayer로부터 메시지 수신
@@ -324,7 +300,7 @@ BOOL Cipc2019Dlg::Receive(unsigned char* ppayload) // ChatAppLayer로부터 메�
 	CString message;
 	message.Format("%s", ppayload);
 
-	if (ppayload[APP_DATA_SIZE + 1] == 1)	// Chatting인 경우
+	if (ppayload[MAX_APP_DATA + 1] == 1)	// Chatting인 경우
 	{
 		message.Format(_T("[%s:%s] "), m_unSrcAddr, m_unDstAddr);
 		int index = m_ListChat.AddString(message);

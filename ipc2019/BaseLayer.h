@@ -16,30 +16,29 @@
 class CBaseLayer
 {
 public:
-	char* GetLayerName();											// 계층의 이름 반환
+	char* GetLayerName();												// 계층의 이름 반환
 
-	CBaseLayer* GetUnderLayer();									// 하위 계층을 반환한다.
-	CBaseLayer* GetUpperLayer(int nindex);							// 인덱스에 해당하는 상위 계층을 반환한다.
-	void			SetUnderUpperLayer(CBaseLayer* pUULayer = NULL);// 인자로 받은 계층을 현재 계층의 Under로, 현재 계층을 인자로 받은 계층의 Upper로 설정
-	void			SetUpperUnderLayer(CBaseLayer* pUULayer = NULL);// 인자로 받은 계층을 현재 계층의 Upper로, 현재 계층을 인자로 받은 계층의 Under로 설정
-	void			SetUnderLayer(CBaseLayer* pUnderLayer = NULL);  // 인자로 받은 계층을 현계층의 Under로 설정
-	void			SetUpperLayer(CBaseLayer* pUpperLayer = NULL);  // 인자로 받은 계층을 현계층의 Upper로 설정
+	CBaseLayer*		GetUnderLayer();									// 하위 계층을 반환한다.
+	CBaseLayer*		GetUpperLayer(int nindex);							// 인덱스에 해당하는 상위 계층을 반환한다.
+	void			SetUnderUpperLayer(CBaseLayer* pUULayer = NULL);	// 인자로 받은 계층을 현재 계층의 Under로, 현재 계층을 인자로 받은 계층의 Upper로 설정
+	void			SetUpperUnderLayer(CBaseLayer* pUULayer = NULL);	// 인자로 받은 계층을 현재 계층의 Upper로, 현재 계층을 인자로 받은 계층의 Under로 설정
+	void			SetUnderLayer(CBaseLayer* pUnderLayer = NULL);		// 인자로 받은 계층을 현계층의 Under로 설정
+	void			SetUpperLayer(CBaseLayer* pUpperLayer = NULL);		// 인자로 받은 계층을 현계층의 Upper로 설정
 
 	CBaseLayer(char* pName = NULL);		// 생성자, 기본값은 NULL이다.
 	virtual ~CBaseLayer();				// 소멸자
 
 	// param : unsigned char*	- the data of the upperlayer
 	//         int				- the length of data
-	virtual	BOOL	Send(unsigned char*, int) { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층으로 전송
-	virtual BOOL	Send(unsigned char* ppayload, int nlength, unsigned char type) { return FALSE; }
+	virtual	BOOL	Send(unsigned char* ppayload, int nlength) { return FALSE; }					 // 평범한 계층에서 쓰이는 함수, 다른 계층으로 전송
 	// param : unsigned char*	- the data of the underlayer	
 	virtual	BOOL	Receive(unsigned char* ppayload) { return FALSE; }	// Dlg Layer에서 쓰이는 함수, 다른 계층에서 수신
-	virtual	BOOL	Receive() { return FALSE; }	// 평범한 계층에서 쓰이는 함수, 다른 계층에서 수신
+	virtual	BOOL	Receive() { return FALSE; }							// 평범한 계층에서 쓰이는 함수, 다른 계층에서 수신
 	
 protected:
-	char* m_pLayerName;		// 계층 이름
-	CBaseLayer* mp_UnderLayer;							// UnderLayer pointer
-	CBaseLayer* mp_aUpperLayer[MAX_LAYER_NUMBER];		// UpperLayer pointer
+	char*			m_pLayerName;							// 계층 이름
+	CBaseLayer*		mp_UnderLayer;							// UnderLayer pointer
+	CBaseLayer*		mp_aUpperLayer[MAX_LAYER_NUMBER];		// UpperLayer pointer
 	int				m_nUpperLayerCount;						// UpperLayer Count
 };
 

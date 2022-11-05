@@ -32,24 +32,52 @@ void CChatAppLayer::ResetHeader()
 	m_sHeader.capp_totlen = 0x0000;
 	m_sHeader.capp_type = 0x00;
 
-	memset(m_sHeader.capp_data, 0, APP_DATA_SIZE);
+	memset(m_sHeader.capp_data, 0, MAX_APP_DATA);
 }
 
-BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength, unsigned char type)
+BOOL CChatAppLayer::Send(unsigned char* ppayload, int nlength)
 {
 	m_sHeader.capp_totlen = (unsigned short)nlength;
 
 	BOOL bSuccess = FALSE;
-	m_sHeader.capp_type = type;
-	//////////////////////// fill the blank ///////////////////////////////
-		// 메모리 복사로 데이터를 header에 저장
-		// ChatApp 레이어의 헤더에 데이터와 그 길이를 저장한다.
-	memcpy(m_sHeader.capp_data, ppayload, nlength > APP_DATA_SIZE ? APP_DATA_SIZE : nlength);
-	// ChatApp 레이어의 밑에 레이어인 Ethertnet 레이어에 데이터를 넘겨준다.
-	// 메모리 참조로 ChatApp의(헤더 + 데이터)와 (데이터 길이+헤더길이)를
-	// 다음 계층의 data로 넘겨준다.
-	bSuccess = mp_UnderLayer->Send((unsigned char*)&m_sHeader, nlength + APP_HEADER_SIZE);
-	///////////////////////////////////////////////////////////////////////
+
+	int len = 0;
+
+	if (nlength > MAX_APP_DATA) // 메시지 길이가 1496 초과인 경우
+	{
+		while (1)
+		{
+			if (len == 0)	// 단편화 했을 때, 시작 조각인 경우
+			{
+				m_sHeader.capp_type = DATA_TYPE_BEGIN;
+				memcpy(m_sHeader.capp_data, ppayload, nlength > MAX_APP_DATA ? MAX_APP_DATA : nlength);
+				((CEthernetLayer*)mp_UnderLayer)->Send((unsigned char*)&m_sHeader, MAX_APP_DATA, DATA_TYPE_BEGIN);
+				len += MAX_APP_DATA;
+			}
+			else
+			{
+				if (nlength - len < MAX_APP_DATA) // 단편화 했을 때, 마지막 조각인 경우
+				{
+					m_sHeader.capp_type = DATA_TYPE_END;
+					memcpy(m_sHeader.capp_data, ppayload, nlength - len);
+					((CEthernetLayer*)mp_UnderLayer)->Send((unsigned char*)&m_sHeader, nlength - len + CHAT_APP_HEADER, DATA_TYPE_END);
+					break;
+				}
+				// 단편화 했을 때, 중간 조각인 경우
+				m_sHeader.capp_type = DATA_TYPE_CONT;
+				memcpy(m_sHeader.capp_data, ppayload, nlength - len > MAX_APP_DATA ? MAX_APP_DATA : nlength);
+				((CEthernetLayer*)mp_UnderLayer)->Send((unsigned char*)&m_sHeader, MAX_APP_DATA, DATA_TYPE_CONT);
+				len += MAX_APP_DATA;
+			}
+		}
+	}
+	else // 메시지 길이가 1496 이하인 경우
+	{
+		memcpy(m_sHeader.capp_data, ppayload, nlength);
+		((CEthernetLayer*)mp_UnderLayer)->Send((unsigned char*)&m_sHeader, nlength + CHAT_APP_HEADER, CHAT_TYPE);
+	}
+	bSuccess = TRUE;
+
 	return bSuccess;
 }
 
@@ -58,7 +86,7 @@ BOOL CChatAppLayer::Receive(unsigned char* ppayload)
 	PCHAT_APP_HEADER capp_hdr = (PCHAT_APP_HEADER)ppayload;
 	static unsigned char* GetBuff;
 
-	if (capp_hdr->capp_totlen <= APP_DATA_SIZE) 
+	if (capp_hdr->capp_totlen <= MAX_APP_DATA)	// 메시지 길이가 1496 이하인 경우
 	{
 		GetBuff = (unsigned char*)malloc(capp_hdr->capp_totlen);
 		memset(GetBuff, 0, capp_hdr->capp_totlen);
@@ -68,17 +96,17 @@ BOOL CChatAppLayer::Receive(unsigned char* ppayload)
 		mp_aUpperLayer[0]->Receive((unsigned char*)GetBuff);
 		return TRUE;
 	}
-	if (capp_hdr->capp_type == DATA_TYPE_BEGIN)
+	if (capp_hdr->capp_type == DATA_TYPE_BEGIN)	// 단편화 했을 때, 시작 조각인 경우
 	{
 		GetBuff = (unsigned char*)malloc(capp_hdr->capp_totlen);
 		memset(GetBuff, 0, capp_hdr->capp_totlen);
 	}
-	else if (capp_hdr->capp_type == DATA_TYPE_CONT)
+	else if (capp_hdr->capp_type == DATA_TYPE_CONT)	// 단편화 했을 때, 중간 조각인 경우
 	{
 		strncat((char*)GetBuff, (char*)capp_hdr->capp_data, strlen((char*)capp_hdr->capp_data));
 		GetBuff[strlen((char*)GetBuff)] = '\0';
 	}
-	else if (capp_hdr->capp_type == DATA_TYPE_END)
+	else if (capp_hdr->capp_type == DATA_TYPE_END)	// 단편화 했을 때, 마지막 조각인 경우
 	{
 		memcpy(GetBuff, GetBuff, capp_hdr->capp_totlen);
 		GetBuff[capp_hdr->capp_totlen] = '\0';
@@ -91,6 +119,7 @@ BOOL CChatAppLayer::Receive(unsigned char* ppayload)
 
 	return TRUE;
 }
+
 
 /*
 UINT CChatAppLayer::ChatThread(LPVOID pParam)
@@ -154,3 +183,14 @@ UINT CChatAppLayer::ChatThread(LPVOID pParam)
 	return bSuccess;
 }
 */
+
+void CChatAppLayer::make_frame(unsigned char* ppayload, unsigned short nlength, unsigned char type, int seq) {
+	unsigned short length = nlength;
+	if (type == 0x00 || type == 0x03)length++;
+	m_sHeader.capp_type = type;
+	m_sHeader.capp_totlen = length;
+	//m_sHeader.capp_seq_num = (unsigned char)seq;
+	//memset(m_sChatApp.capp_data, 0, length > CHAR_DATA_MAX_SIZE ? CHAR_DATA_MAX_SIZE : length);
+	memcpy(m_sHeader.capp_data, ppayload + (seq * MAX_APP_DATA), length > MAX_APP_DATA ? MAX_APP_DATA : length);
+	((CEthernetLayer*)(this->GetUnderLayer()))->Send((unsigned char*)&m_sHeader, CHAT_APP_HEADER + (length > CHAT_APP_HEADER ? MAX_APP_DATA : length), CHAT_TYPE);
+}
